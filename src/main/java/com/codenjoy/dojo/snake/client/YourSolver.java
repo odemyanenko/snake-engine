@@ -149,8 +149,6 @@ public class YourSolver implements Solver<Board> {
             }
             return Direction.RIGHT;
         }
-        //if (board.inversionY(dst.y())>src.getY()) return Direction.DOWN;
-        //if (board.inversionY(dst.y())<src.getY()) return Direction.UP;
         if (dst.y() > src.getY()) {
             if (isObstacle(dst, obstacles)) {
                 if (target.getX() < src.getX() && !isObstacle(new APoint(src.getX() - 1, src.getY()), obstacles)) {
