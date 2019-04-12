@@ -41,10 +41,6 @@ public class YourSolver implements Solver<Board> {
     private Dice dice;
     private Board board;
 
-    private Direction prev_dir = Direction.UP;
-
-    private int dimX, dimY = 0;
-
     public YourSolver(Dice dice) {
         this.dice = dice;
     }
@@ -53,10 +49,16 @@ public class YourSolver implements Solver<Board> {
     public String get(Board board) {
 
         this.board = board;
+
+        if (board.getHead() == null) {
+            System.out.println("null head");
+            return Direction.random().toString();
+        }
+
         List<Point> walls = board.getWalls();
 
-        dimX = walls.stream().mapToInt(Point::getX).max().getAsInt() + 1;
-        dimY = walls.stream().mapToInt(Point::getY).max().getAsInt() + 1;
+        int dimX = walls.stream().mapToInt(Point::getX).max().getAsInt() + 1;
+        int dimY = walls.stream().mapToInt(Point::getY).max().getAsInt() + 1;
 
         List<Point> snake = board.getSnake();
         Point stone = board.getStones().get(0);
@@ -71,34 +73,31 @@ public class YourSolver implements Solver<Board> {
         APoint next_step;
         obstacles.forEach(o -> lee.setObstacle(o.getX(), board.inversionY(o.getY())));
         lee.printMe();
+        System.out.printf("gethead: %d:%d and apple %d:%d\n", board.getHead().getX(), board.getHead().getY(), apple.getX(), apple.getY());
         Optional<List<APoint>> trace_apple_opt =
-                lee.trace(board.getHead(), board.getApples().get(0));
+                lee.trace(board.getHead(), apple);
         if (!trace_apple_opt.isPresent()) {
+            System.out.printf("gethead: %d:%d and stone %d:%d\n", board.getHead().getX(), board.getHead().getY(), stone.getX(), stone.getY());
             Optional<List<APoint>> trace_stone_opt =
                     lee.trace(board.getHead(), stone);
+
             if (!trace_stone_opt.isPresent()) {
-                //return Direction.UP.toString();
-                APoint destPoint = new APoint(board.getHead().getX(), board.getHead().getY() + 1);
-                return convert(destPoint, board.getHead(), stone, obstacles).toString();
+                return convert(getPointTop(board.getHead()), board.getHead(), apple, obstacles).toString();
             }
             List<APoint> trace_stone = trace_stone_opt.get();
             next_step = trace_stone.get(1);
 
-            return convert(next_step, board.getHead(), apple, obstacles).toString();
+            return convert(next_step, board.getHead(), stone, obstacles).toString();
         }
         List<APoint> trace_apple = trace_apple_opt.get();
         next_step = trace_apple.get(1);
 
-        // System.out.println(board.getHead());
+        System.out.println(board.getHead());
         System.out.println(trace_apple);
         System.out.println(obstacles);
+        System.out.printf("next_step: %s; head: %s\n", next_step, board.getHead());
 
-        System.out.printf("next_step: %s; head: %s", next_step, board.getHead());
-
-        prev_dir = convert(next_step, board.getHead(), apple, obstacles);
-        System.out.printf("Prevdir: %s\n", prev_dir);
-
-        return prev_dir.toString();
+        return convert(next_step, board.getHead(), apple, obstacles).toString();
     }
 
     boolean isObstacle(APoint next_step, ArrayList<Point> obstacles) {
@@ -110,72 +109,88 @@ public class YourSolver implements Solver<Board> {
         return false;
     }
 
+    APoint getPointLeft(Point p) {
+        return new APoint(p.getX() - 1, p.getY());
+    }
+
+    APoint getPointRight(Point p) {
+        return new APoint(p.getX() + 1, p.getY());
+    }
+
+    APoint getPointTop(Point p) {
+        return new APoint(p.getX(), p.getY() + 1);
+    }
+
+    APoint getPointBottom(Point p) {
+        return new APoint(p.getX(), p.getY() - 1);
+    }
+
     Direction convert(APoint dst, Point src, Point target, ArrayList<Point> obstacles) {
         System.out.printf("\ndest(%d;%d) src(%d;%d)\n", dst.x(), dst.y(), src.getX(), src.getY());
 
-        if (dst.x() < 0 || dst.x() > dimX || dst.y() < 0 || dst.y() > dimY) {
-            return prev_dir;
-        }
         if (dst.x() < src.getX()) {
-            if (isObstacle(dst, obstacles)) {//<
-                if (target.getY() > src.getY() && !isObstacle(new APoint(src.getX(), src.getY() + 1), obstacles)) {
+            System.out.printf("dest.X:%d<src.X:%d\n", dst.x(), src.getX());
+            if (isObstacle(dst, obstacles)) {
+                if (target.getY() > src.getY() && !isObstacle(getPointTop(src), obstacles)) {
                     return Direction.UP;
-                } else if (target.getY() < src.getY() && !isObstacle(new APoint(src.getX(), src.getY() - 1), obstacles)) {
+                } else if (target.getY() < src.getY() && !isObstacle(getPointBottom(src), obstacles)) {
                     return Direction.DOWN;
-                } else if (!isObstacle(new APoint(src.getX(), src.getY() + 1), obstacles)) {
+                } else if (!isObstacle(getPointTop(src), obstacles)) {
                     return Direction.UP;
-                } else if (!isObstacle(new APoint(src.getX(), src.getY() - 1), obstacles)) {
+                } else if (!isObstacle(getPointBottom(src), obstacles)) {
                     return Direction.DOWN;
-                } else if (!isObstacle(new APoint(src.getX() + 1, src.getY()), obstacles)) {
+                } else if (!isObstacle(getPointRight(src), obstacles)) {
                     return Direction.RIGHT;
                 }
             }
             return Direction.LEFT;
         }
-
         if (dst.x() > src.getX()) {
+            System.out.printf("dest.X:%d>src.X:%d\n", dst.x(), src.getX());
             if (isObstacle(dst, obstacles)) {//<
-                if (target.getY() > src.getY() && !isObstacle(new APoint(src.getX(), src.getY() + 1), obstacles)) {
+                if (target.getY() > src.getY() && !isObstacle(getPointTop(src), obstacles)) {
                     return Direction.UP;
-                } else if (target.getY() < src.getY() && !isObstacle(new APoint(src.getX(), src.getY() - 1), obstacles)) {
+                } else if (target.getY() < src.getY() && !isObstacle(getPointBottom(src), obstacles)) {
                     return Direction.DOWN;
-                } else if (!isObstacle(new APoint(src.getX(), src.getY() + 1), obstacles)) {
+                } else if (!isObstacle(getPointTop(src), obstacles)) {
                     return Direction.UP;
-                } else if (!isObstacle(new APoint(src.getX(), src.getY() - 1), obstacles)) {
+                } else if (!isObstacle(getPointBottom(src), obstacles)) {
                     return Direction.DOWN;
-                } else if (!isObstacle(new APoint(src.getX() - 1, src.getY()), obstacles)) {
+                } else if (!isObstacle(getPointLeft(src), obstacles)) {
                     return Direction.LEFT;
                 }
             }
             return Direction.RIGHT;
         }
         if (dst.y() > src.getY()) {
+            System.out.printf("dest.Y:%d>src.Y:%d\n", dst.y(), src.getY());
             if (isObstacle(dst, obstacles)) {
-                if (target.getX() < src.getX() && !isObstacle(new APoint(src.getX() - 1, src.getY()), obstacles)) {
+                if (target.getX() < src.getX() && !isObstacle(getPointLeft(src), obstacles)) {
                     return Direction.LEFT;
-                } else if (target.getX() > src.getX() && !isObstacle(new APoint(src.getX() + 1, src.getY()), obstacles)) {
+                } else if (target.getX() > src.getX() && !isObstacle(getPointRight(src), obstacles)) {
                     return Direction.RIGHT;
-                } else if (!isObstacle(new APoint(src.getX() - 1, src.getY()), obstacles)) {
+                } else if (!isObstacle(getPointLeft(src), obstacles)) {
                     return Direction.LEFT;
-                } else if (!isObstacle(new APoint(src.getX() + 1, src.getY()), obstacles)) {
+                } else if (!isObstacle(getPointRight(src), obstacles)) {
                     return Direction.RIGHT;
-                } else if (!isObstacle(new APoint(src.getX(), src.getY() - 1), obstacles)) {
+                } else if (!isObstacle(getPointBottom(src), obstacles)) {
                     return Direction.DOWN;
                 }
             }
             return Direction.UP;
         }
         if (dst.y() < src.getY()) {
+            System.out.printf("dest.Y:%d<src.Y:%d\n", dst.y(), src.getY());
             if (isObstacle(dst, obstacles)) {
-                if (target.getX() < src.getX() && !isObstacle(new APoint(src.getX() - 1, src.getY()), obstacles)) {
+                if (target.getX() < src.getX() && !isObstacle(getPointLeft(src), obstacles)) {
                     return Direction.LEFT;
-                } else if (target.getX() > src.getX() && !isObstacle(new APoint(src.getX() + 1, src.getY()), obstacles)) {
+                } else if (target.getX() > src.getX() && !isObstacle(getPointRight(src), obstacles)) {
                     return Direction.RIGHT;
-                } else if (!isObstacle(new APoint(src.getX() - 1, src.getY()), obstacles)) {
+                } else if (!isObstacle(getPointLeft(src), obstacles)) {
                     return Direction.LEFT;
-                } else if (!isObstacle(new APoint(src.getX() + 1, src.getY()), obstacles)) {
+                } else if (!isObstacle(getPointRight(src), obstacles)) {
                     return Direction.RIGHT;
-                } else if (!isObstacle(new APoint(src.getX(), src.getY() + 1), obstacles)) {
+                } else if (!isObstacle(getPointTop(src), obstacles)) {
                     return Direction.UP;
                 }
             }
